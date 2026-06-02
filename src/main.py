@@ -1,4 +1,9 @@
 import sys
+import os
+
+# Add the project root to sys.path to allow absolute imports from src
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from src.agent import run_agent
 
 def main():
