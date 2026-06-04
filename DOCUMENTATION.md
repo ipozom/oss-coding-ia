@@ -13,6 +13,7 @@ This document provides a technical overview of the components and logic behind t
     - [State Management & Reducers](#state-management--reducers)
     - [Infinite Loop Protection](#infinite-loop-protection)
     - [Tool Call Heuristics](#tool-call-heuristics)
+    - [Human-Readable Output](#human-readable-output)
 
 ---
 
@@ -33,6 +34,7 @@ The entry point of the application. It handles:
 - Environment variable loading.
 - Path resolution (adding the project root to `sys.path`).
 - The REPL (Read-Eval-Print Loop) for user interaction.
+- **Formatted output**: Displays initialization info with emojis and clear visual separators for better readability.
 
 ### `src/agent.py`
 The "brain" of the agent. It contains:
@@ -40,6 +42,10 @@ The "brain" of the agent. It contains:
 - **Graph Definition**: Sets up the `StateGraph`, nodes, and edges.
 - **System Prompt**: Provides the persona and operational constraints for the AI.
 - **Wait/Continue Logic**: Determines if the model's response requires tool execution or should terminate the loop.
+- **Output Formatting Functions**:
+    - `format_tool_call()`: Formats tool calls with emoji indicators (e.g., `🔧 Calling tool: read_file('src/agent.py')`).
+    - `format_tool_result()`: Formats tool results with truncation for long outputs.
+    - `format_ai_response()`: Formats AI responses with smart truncation.
 
 ### `src/tools.py`
 Defines the capabilities available to the agent:
@@ -67,3 +73,10 @@ To prevent runaway processes and excessive resource usage, two layers of protect
 
 ### Tool Call Heuristics
 Local models like Qwen sometimes output tool calls as raw JSON strings or within Markdown blocks instead of using the formal `tool_calls` attribute. `src/agent.py` contains a heuristic parser that detects these patterns and manually populates the `tool_calls` object to ensure consistent execution.
+
+### Human-Readable Output
+The agent provides clean, formatted output for better user experience:
+- **Tool Calls**: Displayed with `🔧` emoji showing the tool name and arguments.
+- **Tool Results**: Displayed with `📄` emoji, with automatic truncation for large outputs (more than 500 chars or 10 lines).
+- **AI Responses**: Displayed with `🤖` emoji, truncated if more than 30 lines.
+- **Visual Separators**: Clear separators (`-` and `=` characters) help distinguish between different interaction phases.

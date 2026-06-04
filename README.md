@@ -40,6 +40,7 @@ python src/main.py
 - **Stateful Agent**: Built with LangGraph for reliable tool use and loops.
 - **Loop Protection**: Built-in detection for redundant tool calls and runaway loops.
 - **Heuristic Tool Parsing**: Specialized handling for local models that output tool calls in varied formats.
+- **Human-Readable Output**: Clean formatted output with emojis and truncation for better user experience.
 - **Coding Tools**:
   - `read_file`: Read source code safely.
   - `write_file`: Create or edit files (with folder auto-creation).
