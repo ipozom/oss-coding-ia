@@ -1,17 +1,46 @@
 import json
+import os
 from typing import Annotated, Sequence, TypedDict
+from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage
+from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage, ToolCall
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
 from src.tools import read_file, write_file, run_command, list_directory
+
+# Load environment variables
+load_dotenv()
 
 # Define the state for the agent
 class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], "The messages in the conversation"]
 
-# Initialize the LLM with Ollama
-llm = ChatOllama(model="qwen2.5-coder:14b", temperature=0)
+def get_llm():
+    provider = os.getenv("LLM_PROVIDER", "ollama").lower()
+    
+    if provider == "openai":
+        return ChatOpenAI(
+            model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            api_key=os.getenv("OPENAI_API_KEY"),
+            base_url=os.getenv("OPENAI_API_BASE"), # Optional, for OpenRouter
+            temperature=0
+        )
+    elif provider == "gemini":
+        return ChatGoogleGenerativeAI(
+            model=os.getenv("GOOGLE_MODEL", "gemini-1.5-flash"),
+            google_api_key=os.getenv("GOOGLE_API_KEY"),
+            temperature=0
+        )
+    else:
+        return ChatOllama(
+            model=os.getenv("OLLAMA_MODEL", "qwen2.5-coder:14b"),
+            temperature=0
+        )
+
+# Initialize the LLM
+llm = get_llm()
 
 # Bind tools to the LLM
 tools = [read_file, write_file, run_command, list_directory]
@@ -20,26 +49,26 @@ llm_with_tools = llm.bind_tools(tools)
 # Define the system prompt
 system_prompt = SystemMessage(content=(
     "You are an expert AI software engineer. "
-    "You have access to tools to read, write, and execute code. "
-    "When you need to use a tool, you MUST use the provided tool-calling format. "
-    "Do NOT repeat the same tool call if it returns an error; try a different path or strategy. "
-    "If you are finished or cannot find a file, provide a final explanation to the user. "
-    "Current directory structure contains a 'src' folder. If you want to read 'tools.py', it is likely at 'src/tools.py'. "
-    "ALWAYS use relative paths from the project root. "
-    "Current date is June 2, 2026."
+    "Your goal is to perform coding tasks using the provided tools. "
+    "CRITICAL: After you have gathered enough information using tools (like reading a file), "
+    "you MUST stop using tools and provide your final answer/analysis in plain text. "
+    "Do NOT repeat the same tool call if you already have the result. "
+    "If you have read a file once, do not read it again. "
+    "Current directory structure contains a 'src' folder. Relative paths like 'src/tools.py' are correct. "
+    "ALWAYS end your turn by providing a helpful response to the user."
 ))
-
-import json
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage, ToolCall
-
-# ... (rest of imports)
 
 # Define the function that calls the model
 def call_model(state: AgentState):
-    messages = state['messages']
+    messages = list(state['messages'])
     if not any(isinstance(m, SystemMessage) for m in messages):
-        messages = [system_prompt] + list(messages)
+        messages = [system_prompt] + messages
     
+    # LIMIT: If we have too many messages, the model might be looping
+    if len(messages) > 10:
+        # Prompt the model to finish
+        messages.append(HumanMessage(content="You have used many tools. Please summarize your findings and provide a final answer now."))
+
     response = llm_with_tools.invoke(messages)
     
     # HEURISTIC: If tool_calls is empty but content looks like a tool call JSON, parse it

@@ -1,5 +1,9 @@
 import sys
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Add the project root to sys.path to allow absolute imports from src
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -7,7 +11,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.agent import run_agent
 
 def main():
-    print("OSS Coding IA Agent initialized with Ollama (qwen2.5-coder:14b)")
+    provider = os.getenv("LLM_PROVIDER", "ollama")
+    model = os.getenv("OPENAI_MODEL" if provider == "openai" else "GOOGLE_MODEL" if provider == "gemini" else "OLLAMA_MODEL", "unknown")
+    
+    print(f"OSS Coding IA Agent initialized with {provider} ({model})")
     print("Type 'exit' to quit.")
     
     while True:
