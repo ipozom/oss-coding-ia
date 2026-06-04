@@ -7,15 +7,16 @@ from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage, ToolCall
 from langgraph.graph import StateGraph, END
+from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from src.tools import read_file, write_file, run_command, list_directory
 
 # Load environment variables
 load_dotenv()
 
-# Define the state for the agent
+# Define the state for the agent with a reducer to accumulate messages
 class AgentState(TypedDict):
-    messages: Annotated[Sequence[BaseMessage], "The messages in the conversation"]
+    messages: Annotated[Sequence[BaseMessage], add_messages]
 
 def get_llm():
     provider = os.getenv("LLM_PROVIDER", "ollama").lower()
@@ -60,16 +61,19 @@ system_prompt = SystemMessage(content=(
 
 # Define the function that calls the model
 def call_model(state: AgentState):
-    messages = list(state['messages'])
+    messages = state['messages']
+    
+    # Prepend system prompt to the processing list if not already present
+    # Note: We don't add it to the state to avoid repeating it in the graph
+    model_input = messages
     if not any(isinstance(m, SystemMessage) for m in messages):
-        messages = [system_prompt] + messages
+        model_input = [system_prompt] + list(messages)
     
     # LIMIT: If we have too many messages, the model might be looping
     if len(messages) > 10:
-        # Prompt the model to finish
-        messages.append(HumanMessage(content="You have used many tools. Please summarize your findings and provide a final answer now."))
+        model_input.append(HumanMessage(content="You have used many tools. Please summarize your findings and provide a final answer now."))
 
-    response = llm_with_tools.invoke(messages)
+    response = llm_with_tools.invoke(model_input)
     
     # HEURISTIC: If tool_calls is empty but content looks like a tool call JSON, parse it
     content = response.content.strip()
