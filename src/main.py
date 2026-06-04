@@ -4,11 +4,15 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-
+required_env_vars = ["LLM_PROVIDER", "OPENAI_MODEL", "GOOGLE_MODEL", "OLLAMA_MODEL"]
+missing_env_vars = [var for var in required_env_vars if os.getenv(var) is None]
+if missing_env_vars:
+    print(f"❌ Missing environment variables: {', '.join(missing_env_vars)}")
+    sys.exit(1)
 # Add the project root to sys.path to allow absolute imports from src
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.agent import run_agent
+from src.agent import Agent
 
 def main():
     provider = os.getenv("LLM_PROVIDER", "ollama")
@@ -37,7 +41,12 @@ def main():
             
             if query.strip():
                 print("\n" + "-" * 50)
-                run_agent(query)
+                agent = Agent()
+                try:
+                    response = agent.run(query)
+                    print(response)
+                except Exception as e:
+                    print(f"\n❌ Error processing your request: {e}\n")
                 print("-" * 50 + "\n")
         except KeyboardInterrupt:
             print("\n\n👋 Goodbye!")

@@ -35,7 +35,7 @@ python src/main.py
 
 ## Features
 
-- **Local Execution**: Uses Ollama to run models on your GTX 1080 Ti.
+- **Local Execution**: Uses Ollama to run models on your NVIDIA GPU (GTX 1080 Ti or better).
 - **Multi-Cloud Support**: Configure OpenAI or Gemini by changing a single environment variable.
 - **Stateful Agent**: Built with LangGraph for reliable tool use and loops.
 - **Loop Protection**: Built-in detection for redundant tool calls and runaway loops.

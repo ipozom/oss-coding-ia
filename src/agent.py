@@ -15,6 +15,14 @@ from src.tools import read_file, write_file, run_command, list_directory
 load_dotenv()
 
 # Define the state for the agent with a reducer to accumulate messages
+class Agent:
+    def __init__(self, llm_with_tools):
+        self.llm_with_tools = llm_with_tools
+
+    def run(self, query):
+        # Placeholder for the actual implementation
+        return "I am running your query: " + query
+
 class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
 
