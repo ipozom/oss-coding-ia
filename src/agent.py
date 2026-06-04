@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage, ToolCall
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage, ToolCall, ToolMessage
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
@@ -152,10 +152,56 @@ workflow.add_edge("action", "agent")
 # Compile the graph
 app = workflow.compile()
 
+def format_tool_call(tool_call) -> str:
+    """Format a tool call for human-readable output."""
+    name = tool_call.get('name', 'unknown')
+    args = tool_call.get('args', {})
+    args_str = ', '.join(f"{k}={repr(v)}" for k, v in args.items())
+    return f"🔧 Calling tool: {name}({args_str})"
+
+def format_tool_result(name: str, content: str) -> str:
+    """Format tool result for human-readable output."""
+    # Truncate long outputs
+    if len(content) > 500:
+        lines = content.strip().split('\n')
+        if len(lines) > 10:
+            content = '\n'.join(lines[:10]) + '\n... (truncated)'
+        else:
+            content = content[:500] + '... (truncated)'
+    return f"📄 {name} result:\n{content}"
+
+def format_ai_response(content: str) -> str:
+    """Format AI response for human-readable output."""
+    lines = content.strip().split('\n')
+    # Truncate long responses for cleaner output
+    if len(lines) > 30:
+        return '\n'.join(lines[:30]) + '\n... (truncated)'
+    return content.strip()
+
 def run_agent(query: str):
     inputs = {"messages": [HumanMessage(content=query)]}
+    final_response_printed = False
+    
     for output in app.stream(inputs):
         for key, value in output.items():
-            print(f"Output from node '{key}':")
-            print(value)
-            print("-" * 20)
+            messages = value.get('messages', [])
+            
+            for msg in messages:
+                if isinstance(msg, AIMessage):
+                    # Check if it's a tool call or regular response
+                    if msg.tool_calls:
+                        for tool_call in msg.tool_calls:
+                            print(format_tool_call(tool_call))
+                    elif msg.content and not final_response_printed:
+                        # Only print final response (no tool calls)
+                        response = format_ai_response(msg.content)
+                        print(f"\n🤖 Agent:\n{response}\n")
+                        final_response_printed = True
+                elif isinstance(msg, ToolMessage):
+                    # Show tool results in readable format
+                    tool_name = msg.name or "tool"
+                    content = msg.content or ""
+                    # Only show non-empty results
+                    if content.strip():
+                        print(format_tool_result(tool_name, content))
+                        print("-" * 40)

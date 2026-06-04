@@ -36,12 +36,19 @@ python src/main.py
 ## Features
 
 - **Local Execution**: Uses Ollama to run models on your GTX 1080 Ti.
+- **Multi-Cloud Support**: Configure OpenAI or Gemini by changing a single environment variable.
 - **Stateful Agent**: Built with LangGraph for reliable tool use and loops.
+- **Loop Protection**: Built-in detection for redundant tool calls and runaway loops.
+- **Heuristic Tool Parsing**: Specialized handling for local models that output tool calls in varied formats.
 - **Coding Tools**:
-  - `read_file`: Read source code.
-  - `write_file`: Create or edit files.
+  - `read_file`: Read source code safely.
+  - `write_file`: Create or edit files (with folder auto-creation).
   - `run_command`: Execute terminal commands (build, test, etc.).
   - `list_directory`: Explore project structure.
+
+## Technical Documentation
+
+For in-depth technical details on the agent's logic, heuristics, and architecture, see [DOCUMENTATION.md](DOCUMENTATION.md).
 
 ## Hardware Optimization
 
