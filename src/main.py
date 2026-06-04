@@ -14,14 +14,21 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.agent import Agent
 
-def main():
-    provider = os.getenv("LLM_PROVIDER", "ollama")
-    model = os.getenv(
-        "OPENAI_MODEL" if provider == "openai" else 
-        "GOOGLE_MODEL" if provider == "gemini" else 
+# Define llm_with_tools
+llm_with_tools = {
+    "provider": os.getenv("LLM_PROVIDER", "openai"),
+    "model": os.getenv(
+        "OPENAI_MODEL" if os.getenv("LLM_PROVIDER") == "openai" else 
+        "GOOGLE_MODEL" if os.getenv("LLM_PROVIDER") == "gemini" else 
         "OLLAMA_MODEL", 
         "unknown"
-    )
+    ),
+    # Add any other necessary configuration settings here
+}
+
+def main():
+    provider = llm_with_tools["provider"]
+    model = llm_with_tools["model"]
     
     print("=" * 50)
     print("🤖 OSS Coding IA Agent")
@@ -32,6 +39,9 @@ def main():
     print("Type 'exit', 'quit', or 'q' to quit.")
     print()
     
+    # Initialize the Agent with llm_with_tools
+    agent = Agent(llm_with_tools)
+    
     while True:
         try:
             query = input("💬 User: ")
@@ -41,7 +51,6 @@ def main():
             
             if query.strip():
                 print("\n" + "-" * 50)
-                agent = Agent()
                 try:
                     response = agent.run(query)
                     print(response)

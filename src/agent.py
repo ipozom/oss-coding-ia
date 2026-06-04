@@ -14,15 +14,6 @@ from src.tools import read_file, write_file, run_command, list_directory
 # Load environment variables
 load_dotenv()
 
-# Define the state for the agent with a reducer to accumulate messages
-class Agent:
-    def __init__(self, llm_with_tools):
-        self.llm_with_tools = llm_with_tools
-
-    def run(self, query):
-        # Placeholder for the actual implementation
-        return "I am running your query: " + query
-
 class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
 
@@ -186,30 +177,30 @@ def format_ai_response(content: str) -> str:
         return '\n'.join(lines[:30]) + '\n... (truncated)'
     return content.strip()
 
-def run_agent(query: str):
-    inputs = {"messages": [HumanMessage(content=query)]}
-    final_response_printed = False
-    
-    for output in app.stream(inputs):
-        for key, value in output.items():
-            messages = value.get('messages', [])
-            
-            for msg in messages:
-                if isinstance(msg, AIMessage):
-                    # Check if it's a tool call or regular response
-                    if msg.tool_calls:
-                        for tool_call in msg.tool_calls:
-                            print(format_tool_call(tool_call))
-                    elif msg.content and not final_response_printed:
-                        # Only print final response (no tool calls)
-                        response = format_ai_response(msg.content)
-                        print(f"\n🤖 Agent:\n{response}\n")
-                        final_response_printed = True
-                elif isinstance(msg, ToolMessage):
-                    # Show tool results in readable format
-                    tool_name = msg.name or "tool"
-                    content = msg.content or ""
-                    # Only show non-empty results
-                    if content.strip():
-                        print(format_tool_result(tool_name, content))
-                        print("-" * 40)
+class Agent:
+    def __init__(self, config: dict):
+        self.config = config
+
+    def run(self, query: str):
+        inputs = {"messages": [HumanMessage(content=query)]}
+        final_response_printed = False
+        
+        for output in app.stream(inputs):
+            for key, value in output.items():
+                messages = value.get('messages', [])
+                
+                for msg in messages:
+                    if isinstance(msg, AIMessage):
+                        if msg.tool_calls:
+                            for tool_call in msg.tool_calls:
+                                print(format_tool_call(tool_call))
+                        elif msg.content and not final_response_printed:
+                            response = format_ai_response(msg.content)
+                            print(f"\n🤖 Agent:\n{response}\n")
+                            final_response_printed = True
+                    elif isinstance(msg, ToolMessage):
+                        tool_name = msg.name or "tool"
+                        content = msg.content or ""
+                        if content.strip():
+                            print(format_tool_result(tool_name, content))
+                            print("-" * 40)
